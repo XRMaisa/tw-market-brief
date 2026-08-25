@@ -1,0 +1,25 @@
+name: close-brief
+
+on:
+  schedule:
+    # 14:05 Taiwan (UTC+8) = 06:05 UTC, Mon–Fri. Official close summary.
+    - cron: '5 6 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npx tsx src/run.ts close
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TZ: Asia/Taipei

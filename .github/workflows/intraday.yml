@@ -1,0 +1,26 @@
+name: intraday-brief
+
+on:
+  schedule:
+    # 09:00 Taiwan (UTC+8) = 01:00 UTC, Mon–Fri. Triggers ONE long job that
+    # loops internally from 09:05 to 13:05 every 40 min (precise timing).
+    - cron: '0 1 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npx tsx src/loop.ts
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TZ: Asia/Taipei

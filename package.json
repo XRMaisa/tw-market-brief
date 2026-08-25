@@ -1,0 +1,18 @@
+{
+  "name": "tw-market-brief",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Weekday intraday + close market brief pushed to Discord (TW index, watchlist stocks, gold, FX).",
+  "scripts": {
+    "loop": "tsx src/loop.ts",
+    "close": "tsx src/run.ts close",
+    "once": "tsx src/run.ts intraday",
+    "probe": "tsx src/run.ts probe"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.0"
+  }
+}
