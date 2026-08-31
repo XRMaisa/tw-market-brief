@@ -3,11 +3,9 @@
   "private": true,
   "type": "module",
   "version": "1.0.0",
-  "description": "Weekday intraday + close market brief pushed to Discord (TW index, watchlist stocks, gold, FX).",
+  "description": "Weekday close market brief pushed to Discord (TW index, watchlist stocks, gold, FX).",
   "scripts": {
-    "loop": "tsx src/loop.ts",
     "close": "tsx src/run.ts close",
-    "once": "tsx src/run.ts intraday",
     "probe": "tsx src/run.ts probe"
   },
   "dependencies": {},

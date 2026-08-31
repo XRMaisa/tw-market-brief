@@ -1,10 +1,10 @@
 import './env.js'
-import { buildIntraday, buildClose } from './format.js'
+import { buildClose } from './format.js'
 import { postEmbed, postText } from './discord.js'
 import { yahooQuote, gold, fx } from './sources.js'
 import { WATCHLIST, TAIEX_YAHOO } from './config.js'
 
-// Usage: tsx src/run.ts probe|intraday|close
+// Usage: tsx src/run.ts probe|close
 
 async function probe() {
   const out: Record<string, unknown> = {}
@@ -16,18 +16,17 @@ async function probe() {
   try { out.fx = await fx() } catch (e: any) { out.fx = 'ERR ' + e.message }
   console.log(JSON.stringify(out, null, 2))
   try {
-    const e = await buildIntraday()
-    console.log('\n--- PREVIEW (intraday) ---\n' + e.description)
+    const e = await buildClose()
+    console.log('\n--- PREVIEW (close) ---\n' + e.description)
     console.log('\ncolor: #' + e.color.toString(16).padStart(6, '0'))
   } catch (e: any) { console.log('preview ERR', e.message) }
 }
 
 async function main() {
-  const mode = process.argv[2] ?? 'intraday'
+  const mode = process.argv[2] ?? 'close'
   if (mode === 'probe') return probe()
   try {
-    if (mode === 'intraday') { await postEmbed(await buildIntraday()) }
-    else if (mode === 'close') { await postEmbed(await buildClose()) }
+    if (mode === 'close') { await postEmbed(await buildClose()) }
     else throw new Error(`unknown mode: ${mode}`)
     console.log(`[${new Date().toISOString()}] pushed ${mode}`)
   } catch (e) {

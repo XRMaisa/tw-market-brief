@@ -1,17 +1,16 @@
 # tw-market-brief
 
-每個交易日 3 則(09:05、10:45、14:05 收盤)自動抓台股大盤 + 8 檔個股/ETF + 黃金 + 匯率,整理後推到 Discord。跑在 GitHub Actions。
+每個交易日收盤後(14:05)自動抓台股大盤 + 8 檔個股/ETF + 黃金 + 匯率,整理後推一則**收盤總結**到 Discord。跑在 GitHub Actions。
 
 ## 排程
 
 | Workflow | cron(UTC) | 台灣時間 | 內容 |
 |---|---|---|---|
-| `intraday.yml` | `5 1 * * 1-5`、`45 2 * * 1-5` | **09:05、10:45** | 各推一則盤中快報(獨立短任務) |
-| `close.yml` | `5 6 * * 1-5` | 14:05 | 一則**收盤總結** |
+| `close.yml` | `5 6 * * 1-5` | **14:05** | 一則**收盤總結** |
 
 GitHub Actions runner 設 `TZ=Asia/Taipei`,腳本以本地時間(台灣,UTC+8,無夏令)計算時段。週末不觸發(cron `1-5`);國定假日以 ^TWII 最新成交日偵測,確認休市則跳過。
 
-> ⚠️ GitHub Actions 排程可能延遲;repo 為 public 以提升優先序。若嚴重延遲考慮改 Cloudflare Workers Cron。
+> ⚠️ GitHub Actions 排程可能延遲/漏掉;收盤總結每日一則、較不時間敏感,延遲個幾小時仍可用。若要分鐘級準時,需改 Cloudflare Workers Cron。
 
 ## 資料源(全部免費、免 API key)
 
@@ -39,15 +38,13 @@ Discord embed:色條隨大盤方向(漲紅 `#F44336` / 跌綠 `#4CAF50`),每行�
 npm install
 cp .env.example .env      # 填入 DISCORD_WEBHOOK_URL(本機測試用;.env 已 gitignore)
 npm run probe             # 只抓資料 + 預覽,不送 Discord
-npm run once              # 送一則盤中快報到 Discord
 npm run close             # 送一則收盤總結到 Discord
-npm run loop              # 本機模擬盤中迴圈(09:05–13:05 每 40 分)
 ```
 
 ## GitHub 部署
 
 1. repo `XRMaisa/tw-market-brief`(**public**)已建好並推送。
 2. secret `DISCORD_WEBHOOK_URL` 已設(Settings → Secrets)。
-3. 三個排程(09:05 / 10:45 / 14:05)自動跑;也可在 Actions 頁面手動 `workflow_dispatch` 觸發。
+3. 收盤排程(14:05)自動跑;也可在 Actions 頁面手動 `workflow_dispatch` 觸發。
 
 > Webhook URL 是敏感資訊,只放在 secret / 本機 `.env`,絕不寫進會 commit 的程式碼。

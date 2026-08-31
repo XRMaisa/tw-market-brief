@@ -1,15 +1,17 @@
 # tw-market-brief — 專案 Recap
 
-> 2026-08-27 建立部署;2026-08-28 改 3 則排程 + repo 改 public。回到這專案時先讀這份。
+> 2026-08-27 建置;08-28 改 3 則+public;08-31 簡化為只剩收盤 1 則(盤中兩則因 GH Actions 排程不可靠而砍掉)。回到這專案時先讀這份。
 
 ## 這是什麼
-每個交易日自動抓 **台股大盤 + 8 檔個股/ETF + 黃金 + 匯率**,整理後推到 Discord 的 bot。跑在 **GitHub Actions**(免費、免常駐機器)。
+每個交易日收盤後(14:05)自動抓 **台股大盤 + 8 檔個股/ETF + 黃金 + 匯率**,整理後推一則**收盤總結**到 Discord。跑在 **GitHub Actions**(免費、免常駐機器)。
 
-## 排程(台灣時間 UTC+8)— 每個交易日 3 則
-- `intraday-brief`:**09:05** 與 **10:45** 各推一則盤中快報(2 個獨立 cron,各跑一次短任務)
-- `close-brief`:**14:05** 推一則收盤總結
+## 排程(台灣時間 UTC+8)— 每個交易日 1 則
+- `close-brief`:**14:05** 推一則收盤總結(cron `5 6 * * 1-5` UTC = 06:05 UTC)
 - 週末不跑(cron `1-5`);國定假日偵測到 `^TWII` 無當日成交則跳過
-- ⚠️ GitHub Actions 排程可能延遲;repo 已設為 **public**(優先序較高)。若仍嚴重延遲,考慮改 Cloudflare Workers Cron。
+- ⚠️ GitHub Actions 排程可能延遲(甚至漏掉)— 收盤總結每日一則、較不時間敏感,延遲個幾小時仍可用。若要分鐘級準時,需改 Cloudflare Workers Cron。
+
+## 為什麼只剩一則(歷史)
+原設計盤中每 40 分鐘推一次 → 後改 09:05/10:45/14:05 三則。但 GitHub Actions 對免費帳號的 scheduled workflow 嚴重 deprioritize(共享排程佇列、尖峰延遲數小時甚至直接漏掉 run),盤中即時推播因此失敗(public 也救不了 — 實測週一兩則盤中延遲 6 小時到收盤後才送、close-brief 整則漏掉)。時間不敏感的收盤總結留在 GH;時間敏感的盤中即時如要恢復,需換 Cloudflare Workers Cron。
 
 ## 資料源(全免費、免 API key)
 | 項目 | 來源 |
@@ -32,24 +34,22 @@ Discord **embed**:色條隨大盤方向(**漲紅 `#F44336` / 跌綠 `#4CAF50`**,
 - `¥10,000 = NT$X`
 
 ## 關鍵檔案
-- `src/config.ts` — WATCHLIST、時段、顏色(40min 間隔僅本機 loop 用)
+- `src/config.ts` — WATCHLIST、顏色
 - `src/sources.ts` — 各資料源 fetch(Yahoo/gold-api/er-api)+ 休市偵測
-- `src/format.ts` — 組 Discord embed
+- `src/format.ts` — 組 Discord embed(`buildClose` 用,內部呼叫 `buildIntraday` 再改標題為「收盤總結」)
 - `src/discord.ts` — POST webhook
-- `src/run.ts` — CLI:`probe` / `intraday` / `close`
-- `src/loop.ts` — 盤中迴圈(本機模擬用;workflow 已改用 3 個獨立 cron,不再用此檔)
+- `src/run.ts` — CLI:`probe` / `close`
 - `src/env.ts` — 本機 `.env` 載入器(GH 用 workflow env,不讀 .env)
-- `.github/workflows/intraday.yml`(2 cron:09:05/10:45)、`close.yml`(1 cron:14:05)— 排程(cron 為 UTC)
+- `.github/workflows/close.yml`(1 cron:14:05)— 排程(cron 為 UTC)
 - `.env`(gitignore,本機 webhook)/ `.env.example`
+- (已移除:`intraday.yml`、`src/loop.ts` — 盤中即時用,因 GH 排程不可靠而砍)
 
 ## 本機指令
 ```bash
 cd ~/Desktop/tw-market-brief
 npm install
 npm run probe   # 只抓資料+預覽,不送 Discord
-npm run once    # 送一則盤中快報
 npm run close   # 送一則收盤總結
-npm run loop    # 本機模擬盤中迴圈(09:05–13:05)
 ```
 
 ## GitHub
@@ -62,14 +62,13 @@ npm run loop    # 本機模擬盤中迴圈(09:05–13:05)
 改完 `src/*` 或 workflow → `git add -A && git commit -m "..." && git push`,GH Actions 自動用新版。
 
 ## 已知小事 / Gotchas
-- **GH Actions 排程會延遲**:2026-08-27 close-brief 曾延遲 11 小時(凌晨才送到)、intraday 4h 迴圈漏掉整段。已改 3 個獨立 cron + repo 改 public 提升優先序;若仍嚴重延遲,考慮改 Cloudflare Workers Cron。
+- **GH Actions 排程會延遲/漏掉**:免費帳號 scheduled workflow 被嚴重 deprioritize(共享排程佇列),無設定可解;public 只略改善。這是砍掉盤中即時、只留收盤的原因。收盤每日一則較不時間敏感。
 - GH log 的 `Node 20 deprecated` 警告是 **action 自身 runtime**(checkout/setup-node 內部),不影響腳本(腳本用 Node 22)。要消音可把 `actions/checkout@v4`、`actions/setup-node@v4` 升 `@v5`(選用)。
 - 著色只能用 Discord **embed 色條 + emoji**(純文字不能著色)。
-- 收盤總結 MVP 用 **Yahoo 14:05 的值**(≈官方收盤);官方 TWSE 盤後 API(FMTQIK/STOCK_DAY_ALL)之後可再接,做更權威的收盤數字。
+- 收盤總結用 **Yahoo 14:05 的值**(≈官方收盤);官方 TWSE 盤後 API(FMTQIK/STOCK_DAY_ALL)之後可再接,做更權威的收盤數字。
 - `gh` 在這台機器裝在 `C:\Program Files\GitHub CLI\gh.exe`;若某個 shell 打 `gh` 找不到(舊 session 的 PATH 未更新),用完整路徑即可。
-- 這個專案的 dashboard 淵源(`~/Desktop/finance-dashboard`,Nuxt 4)不是 git repo、未上 GitHub;本 bot 另開獨立 repo,不動 dashboard。
+- dashboard 淵源(`~/Desktop/finance-dashboard`,Nuxt 4)不是 git repo、未上 GitHub;本 bot 另開獨立 repo,不動 dashboard。
 
-## 狀態(2026-08-28)
-- 08-27 部署完成(close-brief run success)。
-- 08-28 發現 GH Actions 排程嚴重延遲(close-brief 延遲 11h 到凌晨、intraday 4h 迴圈漏掉整段 → 0 則盤中)。
-- 08-28 改成 3 個獨立 cron(09:05 / 10:45 / 14:05)+ repo 改 public 以提升優先序。若仍延遲再考慮 Cloudflare。
+## 狀態(2026-08-31)
+- 08-27 部署;08-28 改 3 則+public;08-31 砍掉盤中兩則(GH 排程不可靠),只剩收盤 14:05 一則。
+- 收盤總結每日一則;若要恢復盤中即時,需搬 Cloudflare Workers Cron(屆時把 `buildIntraday` 接到 Worker scheduled handler)。

@@ -26,10 +26,5 @@ export const COLOR_UP = 0xF44336;   // red
 export const COLOR_DOWN = 0x4CAF50; // green
 export const COLOR_FLAT = 0x9E9E9E; // grey
 
-// Intraday loop window (Taiwan time, UTC+8).
-export const FIRST_PUSH = { h: 9, m: 5 };   // 09:05
-export const LAST_PUSH = { h: 13, m: 5 };    // 13:05
-export const PUSH_EVERY_MS = 40 * 60 * 1000; // 40 minutes
-
 // Retry per fetch.
 export const FETCH_RETRIES = 1;
